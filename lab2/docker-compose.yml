@@ -1,0 +1,40 @@
+services:
+  mariadb:
+    image: mariadb:11
+    container_name: mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: "parola"
+      MARIADB_DATABASE: idm
+      MARIADB_USER: idm_app
+      MARIADB_PASSWORD: "totparola"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  idm:
+    build: .
+    container_name: idm-grpc
+    restart: unless-stopped
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_NAME: idm
+      DB_USER: idm_app
+      DB_PASSWORD: "totparola"
+      JWT_SECRET: "4eea16409f48727f3eeeb059e9ccd657229984ec7e809b114b0f62e8be9e4c34"
+      JWT_TTL_SECONDS: "3600"
+      GRPC_PORT: "50051"
+    ports:
+      - "50051:50051"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+volumes:
+  mariadb_data:
