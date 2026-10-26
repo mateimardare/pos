@@ -4,10 +4,10 @@ services:
     container_name: mariadb
     restart: unless-stopped
     environment:
-      MARIADB_ROOT_PASSWORD: "parola"
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
       MARIADB_DATABASE: idm
       MARIADB_USER: idm_app
-      MARIADB_PASSWORD: "totparola"
+      MARIADB_PASSWORD: ${DB_PASSWORD}
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -26,8 +26,9 @@ services:
       DB_PORT: "3306"
       DB_NAME: idm
       DB_USER: idm_app
-      DB_PASSWORD: "totparola"
-      JWT_SECRET: "4eea16409f48727f3eeeb059e9ccd657229984ec7e809b114b0f62e8be9e4c34"
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-http://localhost:50051}
       JWT_TTL_SECONDS: "3600"
       GRPC_PORT: "50051"
     ports:
