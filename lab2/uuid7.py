@@ -3,7 +3,6 @@ import time
 import uuid
 
 def uuid7() -> uuid.UUID:
-    """UUIDv7 (Python 3.12 nu are încă uuid.uuid7(); apare în 3.14)."""
     ms = time.time_ns() // 1_000_000
     b = bytearray(ms.to_bytes(6, "big") + os.urandom(10))
     b[6] = (b[6] & 0x0F) | 0x70   # versiunea 7

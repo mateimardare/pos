@@ -1,4 +1,4 @@
-"""Generează uid-ul și hash-ul bcrypt pentru inserarea manuală a contului admin."""
+
 import getpass
 import bcrypt
 

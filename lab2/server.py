@@ -82,7 +82,7 @@ def password_matches(password, password_hash):
     try:
         return bcrypt.checkpw(password.encode(), password_hash.encode())
     except ValueError:
-        # Hash corupt în DB (ex. inserat greșit manual): îl tratăm ca parolă greșită.
+        # hash corupt
         return False
 
 class IdentityService(idm_pb2_grpc.IdentityServiceServicer):
