@@ -1,0 +1,72 @@
+# Full stack: secured MongoDB, REST service, script runner (IPC), two simulated stations.
+#   ./tools/gen_keys.sh && cp .env.example .env && docker compose up --build
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    command: ["--auth"]
+    env_file: .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+      - ./deploy/mongo-init:/docker-entrypoint-initdb.d:ro
+    networks: [backend]
+
+  api:
+    build: .
+    depends_on: [mongo, runner]
+    environment: &svc-env
+      JWT_SECRET: ${JWT_SECRET}
+      IPC_AUTHKEY: ${IPC_AUTHKEY}
+      MONGO_URI: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASSWORD}@mongo:27017/${MONGO_APP_DB}?authSource=${MONGO_APP_DB}
+      MONGO_DB: ${MONGO_APP_DB}
+      SCRIPTS_DIR: /data/scripts
+      IPC_HOST: runner
+      IPC_PORT: "6000"
+    ports: ["8000:8000"]
+    volumes: [scripts:/data/scripts]
+    networks: [backend]
+
+  runner:
+    build: .
+    command: ["python", "-m", "app.ipc.runner"]
+    depends_on: [mongo]
+    user: "0"   # must read the mounted private key whatever its host owner is
+    environment:
+      <<: *svc-env
+      IPC_HOST: 0.0.0.0            # reachable only on the internal 'backend' network
+      RUNNER_MODE: ssh               # 'dry-run' to test without stations
+      NOTIFY_URL: ${NOTIFY_URL:-}
+      SSH_KEY_PATH: /run/secrets/ssh_key
+      SSH_ACCEPT_UNKNOWN_HOSTS: "1"  # stations generate host keys at start-up (lab setting)
+    secrets: [ssh_key]
+    volumes: [scripts:/data/scripts:ro]
+    networks: [backend, stations]
+
+  station-01: &station
+    build: ./deploy/station
+    hostname: station-01
+    volumes: [./secrets/id_ed25519.pub:/keys/id_ed25519.pub:ro]
+    networks:
+      stations: {ipv4_address: 172.28.0.11}
+  station-02:
+    <<: *station
+    hostname: station-02
+    networks:
+      stations: {ipv4_address: 172.28.0.12}
+
+secrets:
+  ssh_key:
+    file: ./secrets/id_ed25519
+
+volumes:
+  mongo-data:
+  scripts:
+
+networks:
+  backend:
+  stations:
+    ipam:
+      config: [{subnet: 172.28.0.0/24}]
